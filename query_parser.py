@@ -1,9 +1,11 @@
-# from __future__ import print_function
 import re
 import numpy as np
 
 class Parser:
-
+    """
+    done var 15 (bonus feature: no oper. sign between words counts as '&' as well)
+    """
+    # in functions:
     # 0 ~ term
     # 1 ~ n_args
     # 2 ~ |
@@ -37,10 +39,12 @@ class Parser:
             raise Exception('syntax error')
 
     def prepare_postlists(self):
+        """
+        get all postlists required for doing execute() within one-direction file-read
+        """
         self.postlists = self.get_postlists(self.terms)
 
     def execute(self):
-        # print("stack: ", self.stack)
         res, finite = self._rpn_op_exec(self.stack.pop())
         if self.stack:
             raise Exception('non empty stack')
@@ -127,10 +131,8 @@ class Parser:
     def _rpn_op_exec(self, op):
         type, arg, finite = op
         if type == 0:
-            # print('executing type \'term\', arg =', arg)
             return self.postlists[arg], True
         elif type in {2, 3}:
-            # print('executing type', '\'|\'' if type == 2 else '\'&\'')
             t, arg_n, _ = self.stack.pop()
             assert(t == 1)
             args_fin = []
@@ -159,7 +161,6 @@ class Parser:
                     assert(not args_fin)
                     return self.pl_union(args_inf), finite
         elif type == 4:
-            # print('executing type \'!\'')
             opnd = self.stack.pop()
             res, finite = self._rpn_op_exec(opnd)
             return res, not finite

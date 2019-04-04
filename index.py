@@ -11,9 +11,12 @@ import mmh3
 from collections import defaultdict
 from array import array
 from coders import *
-from datetime import datetime
+# from datetime import datetime
 
-buf_len_thres = {14*20}
+# buffer will be passed to simple9 encoder only if len(buffer) is in buf_len_thres.
+# choosing of this parameter will reduce count of size-measurings of the same number
+# (because there may be not enough numbers to encode into 4-byte word with simple9)
+buf_len_thres = {14*6}
 
 class DocumentStreamReader:
     def __init__(self, paths):
@@ -49,18 +52,13 @@ def arr_size_count(arr):
     return arr.buffer_info()[1] * arr.itemsize
 
 def mmh3_hash(s):
+    """
+    64-bit hash
+    """
     return mmh3.hash64(s)[0]
 
-def index_test(term):
-    encoded = index[mmh3_hash(term)][0]
-    if coding == 'varbyte':
-        ans = vb_decode(encoded)
-    elif coding == 'simple9':
-        ans = s9_decode(encoded, remove_zeros=False)
-    return ans
-
 if __name__ == '__main__':
-    t1 = datetime.now()
+    # t1 = datetime.now()
     index = {}
     docs = []
     reader = DocumentStreamReader(parse_command_line().files)
@@ -90,7 +88,7 @@ if __name__ == '__main__':
                 word = word.encode('utf-8')
                 mm_hash = mmh3_hash(word)
                 if mm_hash not in index:
-                    # buffers[mm_hash] = [doc_id]
+                    # index[word] = (postlist, last doc_id, buffer_for_s9)
                     index[mm_hash] = [array('I'), doc_id, array('I', [doc_id])]
                 else:
                     w_pair = index[mm_hash]
@@ -102,10 +100,11 @@ if __name__ == '__main__':
                             read_ = s9_append(w_pair[0], buf)
                             buf[:] = buf[read_:]
         doc_id += 1
-    t2 = datetime.now()
-    time_elapsed = (t2 - t1).total_seconds()
+    # t2 = datetime.now()
+    # time_elapsed = (t2 - t1).total_seconds()
     # print("indexing done in {} s (except force_clears in s9)".format(time_elapsed))
-    t1 = datetime.now()
+    # t1 = datetime.now()
+
     # index is ready. serializing it:
 
     # index file:
@@ -200,7 +199,7 @@ if __name__ == '__main__':
                 for (doc_id, url_size, url) in bucket:
                     array('I', [doc_id, url_size]).write(f)
                     array('B', url).write(f)
-    t2 = datetime.now()
-    time_elapsed_ser = (t2 - t1).total_seconds()
+    # t2 = datetime.now()
+    # time_elapsed_ser = (t2 - t1).total_seconds()
     # print("serializing done in {} s".format(time_elapsed_ser))
     # print("total: {} s".format(time_elapsed  + time_elapsed_ser))

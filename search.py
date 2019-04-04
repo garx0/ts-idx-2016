@@ -10,18 +10,25 @@ from functools import partial
 # from datetime import datetime
 
 def get_postlists(terms, f, coding, n_buckets, buckets_offset, bucket_sizes):
-    # print('get_postlists: terms[0] =', terms[0])
+    """
+    terms is list of input terms
+    gets delta_postlists for all input terms and place them in the same order
+    returns list of delta_postlists (delta_postlist is list of numbers: postlist in deltas format)
+    actual postlist is cumsum of delta_postlist
+
+    f is file, must be opened with 'r', function won't close it.
+    function will run through f file in one direction and take only required postlists
+    (and check postlists in the same buckets as required postlists)
+
+    last 4 parameters are from beginning of file f
+    """
     if coding == 'varbyte':
         decode = vb_decode
-        code_unit_size = 1
     elif coding == 'simple9':
         decode = partial(s9_decode, remove_zeros=True)
-        code_unit_size = 4
     hashes = defaultdict(list)
     hash_idx = defaultdict(list)
     for idx, term in enumerate(terms):
-        # if isinstance(term, unicode):
-        #     term = term.encode('utf-8')
         mm_hash = mmh3_hash(term)
         hash_idx[mm_hash].append(idx)
         bucket_n = mm_hash & (n_buckets - 1)
@@ -63,10 +70,20 @@ def get_postlists(terms, f, coding, n_buckets, buckets_offset, bucket_sizes):
                     break
             else:
                 f.seek(f.tell() + pl_size + (-pl_size) % 4)
-    # print('got', np.cumsum(ans))
     return ans
 
 def get_urls(input_docids, f, n_buckets, buckets_offset, bucket_sizes):
+    """
+    input_docids is list of input docIDs
+    gets urls for all input docIDs and place them in the same order
+    returns list of urls (url is string)
+
+    f is file, must be opened with 'r', function won't close it.
+    function will run through f file in one direction and take only required urls
+    (and check urls in the same buckets as required urls)
+
+    last 3 parameters are from beginning of file f
+    """
     if not len(input_docids):
         return []
     docid_idx = defaultdict(list)
@@ -144,7 +161,6 @@ if __name__ == '__main__':
             parser.prepare_postlists()
             ans = parser.execute()
             assert(sorted(ans) == list(ans))
-            # print('ans:', ans)
             print(len(ans))
             if not len(ans):
                 # t2 = datetime.now()
